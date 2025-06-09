@@ -46,7 +46,7 @@ export default function UpdatePfp() {
             <form onSubmit={(e) => HandleSubmit(e)}>
 
                 <div className="mb-3">
-                    <label htmlFor="formFile" className="form-label">Default file input example</label>
+                    <label htmlFor="formFile" className="form-label">Pick a Profile Picture</label>
                     <input className="form-control" onChange={handleFileChange} type="file" id="formFile" />
                     <br />
 
