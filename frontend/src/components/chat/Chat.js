@@ -5,7 +5,7 @@ import message from "./message.png"
 
 export default function Chat() {
 
-  const [showEditModal, setShowEditModal] = useState(true);
+  const [showChatModal, setShowChatModal] = useState(true);
 
 
   const [likeHover, setLikeHover] = useState(false);
@@ -17,7 +17,7 @@ export default function Chat() {
 
 
   function handleClick(setActive) {
-    setShowEditModal(!showEditModal)
+    setShowChatModal(!showChatModal)
     setActive(true);
     setTimeout(() => setActive(false), 150); // effect lasts 150ms
   }
@@ -54,9 +54,13 @@ export default function Chat() {
           }}
         />
       </button>
-      <Modal show={showEditModal} onClose={() => setShowEditModal(false)}>
-        <h2>Edit Your Profile</h2>
-      </Modal>
+
+        <Modal 
+  className="chat-modal-backdrop left-positioned"
+  style={{textAlign: "center"}} 
+  show={showChatModal} 
+  onClose={() => setShowChatModal(false)}
+/>
     </div>
   )
 }

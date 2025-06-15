@@ -7,6 +7,8 @@ export default function Navbar(props) {
     const username = localStorage.getItem("username");
     const imageUrl = `http://localhost:5000/api/fetchPfp?username=${username}`;
 
+    
+
     return (
         <nav className="navbar navbar-expand-lg navbar-light bg-light">
             <img src={imageUrl}

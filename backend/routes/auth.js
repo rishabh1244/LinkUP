@@ -1,11 +1,16 @@
 const express = require("express");
 const router = express.Router();
 const bcrypt = require("bcrypt")
-const User = require('../models/User');
 
+const User = require("../models/User");
+const Post = require("../models/Post");
+const Likes = require("../models/Likes");
 
 const fetchuser = require("../middleware/fetchUser")
 let jwt = require("jsonwebtoken");
+
+const fs = require("fs");
+const path = require("path");
 
 let JWT_SECRET = process.env.JWT_SECRET;
 
@@ -91,41 +96,95 @@ router.post(
 );
 
 router.post(
-    "/updateUser",
-    [
-        body("newUsername", "Enter a valid new name").isLength({ min: 3 }),
-    ],
-    async (req, res) => {
-        let success = false;
-        const errors = validationResult(req);
-        if (!errors.isEmpty()) {
-            return res.status(400).json({ errors: errors.array() });
-        }
-
-        const { username, newUsername } = req.body;
-
-        //console.log('request cam for :' + username);
-        try {
-            const user = await User.findOne({ username });
-
-            if (!user) {
-                return res.status(400).json({ success, error: "User does not exist" });
-            }
-
-            // Update the username
-            user.username = newUsername;
-            await user.save();
-
-            success = true;
-            res.json({ success, message: "Username updated successfully", user });
-
-        } catch (error) {
-            console.error(error.message);
-            res.status(500).send("Internal Server Error");
-        }
+  "/updateUser",
+  [body("newUsername", "Enter a valid new name").isLength({ min: 3 })],
+  async (req, res) => {
+    let success = false;
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
     }
-);
 
+    const { username, newUsername } = req.body;
+
+    try {
+      const user = await User.findOne({ username });
+      if (!user) {
+        return res.status(400).json({ success, error: "User does not exist" });
+      }
+
+      const oldDir = path.join(__dirname, "../../uploads", username);
+      const newDir = path.join(__dirname, "../../uploads", newUsername);
+
+      // Update the username in DB
+      user.username = newUsername;
+      await user.save();
+
+      // Rename the user's upload directory
+      if (fs.existsSync(oldDir)) {
+        fs.renameSync(oldDir, newDir);
+
+        const postsDir = path.join(newDir, "posts");
+        if (fs.existsSync(postsDir)) {
+          const files = fs.readdirSync(postsDir);
+
+          for (const file of files) {
+            const regex = new RegExp(`^${username}_(\\d+)\\.png$`);
+            const match = file.match(regex);
+            if (match) {
+              const index = match[1];
+              const oldFilePath = path.join(postsDir, file);
+              const newFileName = `${newUsername}_${index}.png`;
+              const newFilePath = path.join(postsDir, newFileName);
+
+              // Rename file
+              fs.renameSync(oldFilePath, newFilePath);
+            }
+          }
+        }
+      }
+
+      // Update author name in posts
+      await Post.updateMany({ author: username }, { $set: { author: newUsername } });
+
+      // Update postAuthor in likes
+      await Likes.updateMany({ postAuthor: username }, { $set: { postAuthor: newUsername } });
+
+      // Get all posts by new user and update post_name in both Post and Likes
+      const posts = await Post.find({ author: newUsername });
+
+      for (const post of posts) {
+        const match = post.post_name.match(new RegExp(`^${username}_(\\d+)$`));
+        if (match) {
+          const index = match[1];
+          const newPostName = `${newUsername}_${index}`;
+
+          // Update post_name in Post
+          await Post.updateOne(
+            { _id: post._id },
+            { $set: { post_name: newPostName } }
+          );
+
+          // Update postName in Likes
+            await Likes.updateMany(
+                { postName: post.post_name },
+               { $set: { postName: newPostName, LikedBy: newUsername } }
+            );
+            }
+      }
+
+      success = true;
+      res.json({
+        success,
+        message: "Username, author name, image names, and references updated successfully",
+        user,
+      });
+    } catch (error) {
+      console.error("Update failed:", error.message);
+      res.status(500).send("Internal Server Error");
+    }
+  }
+);
 
 // get logged in user details
 router.post("/getuser", fetchuser, async (req, res) => {

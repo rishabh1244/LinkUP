@@ -13,6 +13,7 @@ import chat from "./chat.png"
 import postIcon from "./more.png"
 
 import Posts from "./posts/Posts";
+import Modal from "../chat/Modal"
 
 export default function Profile() {
   let navigate = useNavigate();
@@ -25,13 +26,10 @@ export default function Profile() {
 
   const [showEditModal, setShowEditModal] = useState(false);
   const [showPostModal, setShowPostModal] = useState(false);
+  const [showChatModal, setShowChatModal] = useState(false);
 
   const [type, setType] = useState("chat");
   const [logo, setLogo] = useState(chat);
-
-  const [validPosts, setValidPosts] = useState([]);
-
-
 
   useEffect(() => {
 
@@ -41,6 +39,7 @@ export default function Profile() {
     }
     //console.log(username)
   }, [username]);
+
 
 
   //button behaviour 
@@ -61,6 +60,8 @@ export default function Profile() {
     if (type === "settings") {
       setShowEditModal(true)
 
+    } else {
+      setShowChatModal(!showChatModal)
     }
 
   }
@@ -74,7 +75,6 @@ export default function Profile() {
     }
 
   }
-  //////////////
 
   const logout = () => {
     //console.log(localStorage.getItem("token"))
@@ -84,6 +84,8 @@ export default function Profile() {
   }
   return (
     <div className="profile">
+      <Modal show={showChatModal} username={username} onClose={() => setShowChatModal(false)} centered={true} />
+
       <Navbar username={localStorage.getItem("username")} logout={logout} />
       <img
         src={pfp}
@@ -115,7 +117,7 @@ export default function Profile() {
       </button>
 
 
-      {(username === localStorage.getItem("username"))&&<button
+      {(username === localStorage.getItem("username")) && <button
 
         id={type}
         className="button"
@@ -139,8 +141,8 @@ export default function Profile() {
         <h2>Edit Your Profile</h2>
       </EditModal>
 
-     <PostModal show={showPostModal} onClose={() => setShowPostModal(false)}>
-       <h2>Make a Post</h2>
+      <PostModal show={showPostModal} onClose={() => setShowPostModal(false)}>
+        <h2>Make a Post</h2>
       </PostModal>
 
       <hr></hr>

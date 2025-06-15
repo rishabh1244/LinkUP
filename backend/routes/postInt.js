@@ -3,7 +3,6 @@ const router = express.Router();
 
 const Likes = require('../models/Likes');
 const Post = require('../models/Post');
-const Like = require('../models/Likes');
 
 router.post("/like", async (req, res) => {
     const { postName, postAuthor, LikedBy } = req.body;
@@ -52,22 +51,6 @@ router.post("/isLiked", async (req, res) => {
 })
 
 
-
-//add in an async function
-// await Post.updateMany(
-//   {
-//     $or: [
-//       { LikeCount: { $exists: false } },
-//       { CommentCount: { $exists: false } }
-//     ]
-//   },
-//   {
-//     $set: {
-//       LikeCount: 0,
-//       CommentCount: 0
-//     }
-//   }
-// );
 
 
 

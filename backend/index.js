@@ -18,8 +18,8 @@ app.get('/', (req, res) => {
 
 //routes throught file 
 app.use("/api/auth", require("./routes/auth"))
-
 app.use("/api", require("./routes/upload"))
+app.use("/api", require("./routes/chat"))
 app.use("/api/postInt", require("./routes/postInt"))
 
 app.use(cors()); // allow requests from frontend

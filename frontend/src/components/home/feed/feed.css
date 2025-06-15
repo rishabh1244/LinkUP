@@ -1,9 +1,5 @@
 .feed {
-  margin-left: 32%;
-  /* background-color: black; */
-  /* height:100vh; */
-  /* width: fit-content; */
-  /* overflow-Y: scroll; */
+  margin-left: 36%;
   flex: 1;
   overflow-y: scroll;
 }

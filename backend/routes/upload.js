@@ -7,6 +7,7 @@ const fs = require("fs")
 const User = require('../models/User');
 const Post = require('../models/Post');
 const Comments = require('../models/Comments');
+const Likes = require("../models/Likes")
 
 const upload = require("../middleware/multer");
 const app = express();
@@ -17,14 +18,27 @@ router.post("/upload", upload.single("file"), (req, res) => {
 
 router.get("/fetchPfp", (req, res) => {
   const username = req.query.username;
-  const filePath = path.join(__dirname, "../../uploads", username, "pfp.png");
+  const userDir = path.join(__dirname, "../../uploads", username);
 
-  res.sendFile(filePath, (err) => {
+
+
+  // Try to find the file that starts with "pfp."
+  fs.readdir(userDir, (err, files) => {
     if (err) {
-      if (!res.headersSent) {
+      return res.status(500).send("Error reading user directory");
+    }
+
+    const pfpFile = files.find(file => file.startsWith("pfp."));
+    if (!pfpFile) {
+      return res.status(404).send("Profile picture not found");
+    }
+
+    const filePath = path.join(userDir, pfpFile);
+    res.sendFile(filePath, (err) => {
+      if (err && !res.headersSent) {
         res.status(404).send("File not found");
       }
-    }
+    });
   });
 });
 
@@ -89,17 +103,28 @@ router.post("/fetchPostData", async (req, res) => {
 
 router.get("/fetchPostFile/:username/:index", (req, res) => {
   const { username, index } = req.params;
-  const filePath = path.join(__dirname, "../../uploads", username, "posts", `${index}.png`);
+  const postDir = path.join(__dirname, "../../uploads", username, "posts");
 
-  res.sendFile(filePath, (err) => {
-    // Don't log "File not found" errors
-    if (err && err.code !== 'ENOENT') {
-      console.error("Unexpected error:", err.message);
+  fs.readdir(postDir, (err, files) => {
+    if (err) {
+      return res.status(500).send("Error reading post directory");
     }
 
-    if (err && !res.headersSent) {
-      res.status(404).send("File not found");
+    // Find file that matches index with any extension
+    const matchingFile = files.find(file => path.parse(file).name === index);
+    if (!matchingFile) {
+      return res.status(404).send("File not found");
     }
+
+    const filePath = path.join(postDir, matchingFile);
+    res.sendFile(filePath, (err) => {
+      if (err && err.code !== 'ENOENT') {
+        console.error("Unexpected error:", err.message);
+      }
+      if (err && !res.headersSent) {
+        res.status(404).send("File not found");
+      }
+    });
   });
 });
 
@@ -115,22 +140,29 @@ router.get("/fetchInfo", async (req, res) => {
 
 
 router.post("/deletePost", async (req, res) => {
-
   const { DelBy, postAuthor, postName } = req.body;
 
   if (DelBy === postAuthor) {
-    const filePath = path.join(__dirname, "../../uploads", postAuthor, "posts", `${postName}.png`);
+    const postDir = path.join(__dirname, "../../uploads", postAuthor, "posts");
+    const possibleExtensions = [".png", ".jpg", ".jpeg"];
+    let filePath = null;
 
-
-
+    for (const ext of possibleExtensions) {
+      const tempPath = path.join(postDir, `${postName}${ext}`);
+      if (fs.existsSync(tempPath)) {
+        filePath = tempPath;
+        break;
+      }
+    }
     try {
       // Delete the image file
       await fs.promises.unlink(filePath);
+
       await Post.deleteOne({ post_name: postName });
 
-      await Comments.deleteMany({postName});
-
-      //console.log("File deleted:", filePath);
+      await Comments.deleteMany({ postName });
+      await Likes.deleteMany({ postName });
+      await User.updateOne({ username: postAuthor }, { $inc: { posts: -1 } });
 
       res.status(200).send("Post deleted successfully.");
     } catch (err) {
@@ -138,12 +170,11 @@ router.post("/deletePost", async (req, res) => {
       res.status(500).send("Failed to delete post.");
     }
 
-
-
   } else {
-    res.status(500).send("you dont have authority to delete this post")
+    res.status(403).send("You don't have authority to delete this post.");
   }
 });
+
 
 
 //Comments 
@@ -162,6 +193,10 @@ router.post("/addComment", async (req, res) => {
       Comment,
       date: new Date()
     });
+
+    let post = await Post.findOne({ post_name: postName })
+    post.CommentCount++;
+    await post.save();
 
     res.status(201).send("Comment added");
   } catch (err) {
@@ -206,6 +241,11 @@ router.post("/deleteComment", async (req, res) => {
     if (!deleted) {
       return res.status(404).send("Comment not found");
     }
+
+    let post = await Post.findOne({ post_name: postName })
+    post.CommentCount--;
+    await post.save();
+
 
     res.status(200).send("Comment deleted");
   } catch (err) {

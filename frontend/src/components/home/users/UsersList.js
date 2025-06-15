@@ -13,7 +13,6 @@ export default function UsersList() {
     const imageUrl = `http://localhost:5000/api/fetchPfp?username=${username}`;
 
     useEffect(() => {
-
         fetchUsers()
     }, []);
 
